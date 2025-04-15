@@ -1,0 +1,73 @@
+name: M3U Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  generate-sources:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Generate source files
+      env:
+        BASE_URL: ${{ secrets.BASE_URL }}
+        JSON_URL: ${{ secrets.JSON_URL }}
+      run: |
+        pip install -r requirements.txt
+        python scripts/generate_sources.py
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: sources
+        path: sources/
+
+  build-m3u:
+    needs: generate-sources
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/download-artifact@v3
+      with:
+        name: sources
+
+    - name: Process M3U
+      run: |
+        chmod +x scripts/process_m3u.sh
+        ./scripts/process_m3u.sh
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: m3u
+        path: m3u/
+
+  generate-config:
+    needs: build-m3u
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/download-artifact@v3
+      with:
+        name: m3u
+
+    - name: Create config
+      env:
+        REPO_RAW: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}
+      run: |
+        jq --arg repo "$REPO_RAW" \
+           --arg logo "${{ secrets.DEFAULT_LOGO }}" \
+           -f config/template.json m3u/ > final_config.json
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: config
+        path: final_config.json
