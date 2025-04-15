@@ -1,0 +1,7 @@
+*.log
+*.tmp
+.env
+artifacts/
+sources/
+m3u/
+!.github/secrets/*
