@@ -82,8 +82,21 @@ jobs:
         echo "=== 生成的M3U文件 ==="
         tree -sh "${M3U_DIR}"
 
-    - name: Upload M3U Files
-      uses: actions/upload-artifact@v4
-      with:
-        name: m3u-output
-        path: ${{ env.WORKSPACE }}/m3u  # 使用绝对路径
+    - name: Commit and Push M3U Files
+      run: |
+        # 配置Git身份
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+
+        # 将生成的m3u文件移动到仓库目录
+        REPO_DIR="/home/runner/work/pintaizhibo/pintaizhibo"
+        mkdir -p "${REPO_DIR}/m3u"
+        cp -r /home/runner/work/pintaizhibo/m3u/* "${REPO_DIR}/m3u/"
+
+        # 提交更改
+        cd "${REPO_DIR}"
+        git add m3u/
+        git commit -m "Auto-Update M3U Files [skip ci]"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 使用内置Token
