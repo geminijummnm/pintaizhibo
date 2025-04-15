@@ -1,79 +1,22 @@
-name: M3U Pipeline
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-
 jobs:
   generate-sources:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v4  # 必须添加此步骤才能获取仓库文件
     
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
 
+    - name: Install dependencies
+      run: |
+        pip install requests  # 显式安装必要库
+    
     - name: Generate URL files
       env:
         BASE_URL: ${{ secrets.BASE_URL }}
         JSON_URL: ${{ secrets.JSON_URL }}
       run: |
-        # 创建多级目录
         mkdir -p sources/url
         python scripts/generate_sources.py
-        
-        echo "=== 生成的URL文件 ==="
-        tree sources/url/
-
-    - uses: actions/upload-artifact@v4
-      with:
-        name: url-files
-        path: sources/url/
-        retention-days: 1
-
-  build-m3u:
-    needs: generate-sources
-    runs-on: ubuntu-latest
-    env:
-      LANG: C.UTF-8
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Download URL files
-      uses: actions/download-artifact@v4
-      with:
-        name: url-files
-        path: sources/url
-
-    - name: Install tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y jq tree
-
-    - name: Process M3U
-      shell: bash
-      run: |
-        # 初始化目录
-        mkdir -p m3u
-        
-        echo "=== 环境验证 ==="
-        echo "工作目录: $(pwd)"
-        echo "目录结构:"
-        tree -L 3
-        
-        # 处理文件
-        chmod +x scripts/process_m3u.sh
-        ./scripts/process_m3u.sh
-        
-        echo "=== 结果验证 ==="
-        echo "生成的M3U文件:"
-        find m3u/ -type f -print -exec head -n 3 {} \;
-
-    - uses: actions/upload-artifact@v4
-      with:
-        name: m3u
-        path: m3u/
-        retention-days: 1
