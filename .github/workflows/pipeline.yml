@@ -1,8 +1,15 @@
+name: M3U Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
 jobs:
   generate-sources:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4  # 必须添加此步骤才能获取仓库文件
+    - uses: actions/checkout@v4
     
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -10,9 +17,8 @@ jobs:
         python-version: '3.10'
 
     - name: Install dependencies
-      run: |
-        pip install requests  # 显式安装必要库
-    
+      run: pip install requests
+
     - name: Generate URL files
       env:
         BASE_URL: ${{ secrets.BASE_URL }}
@@ -20,3 +26,27 @@ jobs:
       run: |
         mkdir -p sources/url
         python scripts/generate_sources.py
+        echo "生成的文件:"
+        ls -la sources/url/
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: url-files
+        path: sources/url/
+
+  build-m3u:
+    needs: generate-sources
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/download-artifact@v4
+      with:
+        name: url-files
+        path: sources/url
+
+    - name: Process M3U
+      run: |
+        mkdir -p m3u
+        chmod +x scripts/process_m3u.sh
+        ./scripts/process_m3u.sh
