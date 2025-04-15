@@ -24,6 +24,13 @@ jobs:
         pip install -r requirements.txt
         python scripts/generate_sources.py
 
+    - name: Validate sources directory
+      run: |
+        echo "✅ 生成的.url文件列表:"
+        ls -la sources/
+        echo "文件内容示例:"
+        head -n 3 sources/*.url
+
     - uses: actions/upload-artifact@v4
       with:
         name: sources
@@ -43,23 +50,26 @@ jobs:
         name: sources
         path: ./sources
 
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
+
     - name: Process M3U
-      shell: bash {0}
+      shell: bash
       run: |
         echo "=== 环境验证 ==="
         echo "当前工作目录: $(pwd)"
-        echo "目录结构:"
-        tree -L 3
-        
-        echo "=== 文件预处理 ==="
-        chmod +x scripts/process_m3u.sh
-        mkdir -p m3u
+        echo "sources目录内容:"
+        ls -la sources/
         
         echo "=== 执行处理 ==="
+        mkdir -p m3u
+        chmod +x scripts/process_m3u.sh
         ./scripts/process_m3u.sh
         
         echo "=== 结果验证 ==="
-        echo "生成的M3U文件:"
+        echo "生成的M3U文件列表:"
         find m3u/ -type f -print -exec head -n 3 {} \;
 
     - uses: actions/upload-artifact@v4
