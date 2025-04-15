@@ -12,34 +12,43 @@ def main():
     json_url = os.getenv('JSON_URL', 'http://api.vipmisss.com:81/mf/json.txt')
     
     print(f"🔄 正在获取数据源: {json_url}")
-    
+
     try:
-        response = requests.get(json_url, timeout=15)
+        # 添加请求头避免反爬虫
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(json_url, headers=headers, timeout=15)
         response.raise_for_status()
         data = response.json()
         print("✅ 成功获取JSON数据")
     except Exception as e:
         print(f"❌ 数据获取失败: {str(e)}")
+        print(f"原始响应内容: {response.text[:200]}") if 'response' in locals() else ""
         exit(1)
 
     os.makedirs('sources', exist_ok=True)
-    print(f"📁 创建输出目录: {os.path.abspath('sources')}")
-
     success_count = 0
+
     for idx, platform in enumerate(data.get('pingtai', []), 1):
         title = platform.get('title', f'未命名_{idx}')
-        address = platform.get('address', '').lstrip('/')
-        
-        # 验证数据完整性
+        address = platform.get('address', '')
         if not address:
             print(f"⚠️ 跳过无效条目: {title} (无address字段)")
             continue
         
-        safe_title = sanitize_filename(title)
+        # 清理URL路径
+        address = address.lstrip('/')
         full_url = f"{base_url}{address}"
         
+        # 验证URL格式
+        if not full_url.startswith(('http://', 'https://')):
+            print(f"❌ 非法URL格式: {full_url}")
+            continue
+        
+        safe_title = sanitize_filename(title)
         file_path = os.path.join('sources', f"{safe_title}.url")
+        
         try:
+            # 写入文件并验证内容
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(f"{title}={full_url}")
             success_count += 1
