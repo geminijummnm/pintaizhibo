@@ -35,12 +35,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: sources
+        path: ./sources
 
     - name: Process M3U
       run: |
+        echo "当前工作目录: $(pwd)"
+        echo "sources 目录内容:"
+        ls -la sources/
+        
+        mkdir -p m3u
         chmod +x scripts/process_m3u.sh
         ./scripts/process_m3u.sh
 
@@ -48,26 +54,3 @@ jobs:
       with:
         name: m3u
         path: m3u/
-
-  generate-config:
-    needs: build-m3u
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - uses: actions/download-artifact@v3
-      with:
-        name: m3u
-
-    - name: Create config
-      env:
-        REPO_RAW: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}
-      run: |
-        jq --arg repo "$REPO_RAW" \
-           --arg logo "${{ secrets.DEFAULT_LOGO }}" \
-           -f config/template.json m3u/ > final_config.json
-
-    - uses: actions/upload-artifact@v4
-      with:
-        name: config
-        path: final_config.json
