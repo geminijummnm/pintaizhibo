@@ -1,7 +1,6 @@
+# 原有忽略规则
+/tmp/
 *.log
-*.tmp
-.env
-artifacts/
-sources/
-m3u/
-!.github/secrets/*
+
+# 添加例外：允许跟踪 m3u 目录下的所有文件
+!m3u/
