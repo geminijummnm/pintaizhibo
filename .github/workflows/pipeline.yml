@@ -1,4 +1,4 @@
-name: M3U Pipeline
+name: M3U Generator
 
 on:
   push:
@@ -6,79 +6,45 @@ on:
   workflow_dispatch:
 
 jobs:
-  generate-sources:
+  generate-m3u:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-
-    - name: Install dependencies
-      run: pip install requests  # 确保安装requests库
-
-    - name: Generate URL files
-      env:
-        BASE_URL: ${{ secrets.BASE_URL }}
-        JSON_URL: ${{ secrets.JSON_URL }}
-      run: |
-        mkdir -p sources/url
-        python scripts/generate_sources.py
-        echo "生成的URL文件："
-        tree sources/url/
-
-    - uses: actions/upload-artifact@v4
-      with:
-        name: url-files
-        path: sources/url/
-
-  build-m3u:
-    needs: generate-sources
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Download URL files
-      uses: actions/download-artifact@v4
-      with:
-        name: url-files
-        path: sources/url
 
     - name: Setup Tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y jq tree  # 安装依赖工具
+        sudo apt-get install -y jq tree
 
-    - name: Process M3U
+    - name: Process M3U Files
+      env:
+        WORKSPACE: "/home/runner/work/pintaizhibo"
       run: |
-        # 初始化目录
-        mkdir -p ../m3u  # 在根目录创建m3u文件夹
-        
-        # 设置绝对路径
-        WORKSPACE="/home/runner/work/pintaizhibo"
+        # 初始化绝对路径
         REPO_DIR="${WORKSPACE}/pintaizhibo"
         M3U_DIR="${WORKSPACE}/m3u"
         URL_DIR="${REPO_DIR}/sources/url"
 
+        # 强制创建目录
+        mkdir -p "${M3U_DIR}"
+        chmod 777 "${M3U_DIR}"
+
         echo "🛠️ 路径验证"
-        echo "工作区根目录: ${WORKSPACE}"
-        echo "仓库目录: ${REPO_DIR}"
         echo "M3U输出目录: ${M3U_DIR}"
         echo "URL文件目录: ${URL_DIR}"
-        echo "目录结构:"
-        tree -L 3 "${WORKSPACE}"
+        ls -l "${URL_DIR}"
 
         # 运行处理脚本
-        chmod +x ${REPO_DIR}/scripts/process_m3u.sh
-        ${REPO_DIR}/scripts/process_m3u.sh
+        chmod +x "${REPO_DIR}/scripts/process_m3u.sh"
+        "${REPO_DIR}/scripts/process_m3u.sh"
 
-        # 结果验证
-        echo "=== 生成的M3U文件 ==="
-        tree "${M3U_DIR}"
+        # 最终验证
+        echo "=== 生成文件列表 ==="
+        tree -sh "${M3U_DIR}"
+        echo "=== 文件详情 ==="
+        ls -l "${M3U_DIR}"
 
     - uses: actions/upload-artifact@v4
       with:
-        name: m3u-files
-        path: ../m3u/  # 上传根目录下的m3u文件夹
+        name: m3u-output
+        path: /home/runner/work/pintaizhibo/m3u
