@@ -8,6 +8,8 @@ on:
 jobs:
   generate-m3u:
     runs-on: ubuntu-latest
+    env:
+      WORKSPACE: "/home/runner/work/pintaizhibo"
     steps:
     - uses: actions/checkout@v4
 
@@ -15,26 +17,30 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y jq tree
+        echo "✅ 工具安装完成"
 
-    - name: Process M3U Files
-      env:
-        WORKSPACE: "/home/runner/work/pintaizhibo"
+    - name: Initialize Directories
       run: |
-        # 初始化绝对路径
-        REPO_DIR="${WORKSPACE}/pintaizhibo"
+        # 定义绝对路径
         M3U_DIR="${WORKSPACE}/m3u"
-        URL_DIR="${REPO_DIR}/sources/url"
+        URL_DIR="${WORKSPACE}/pintaizhibo/sources/url"
 
-        # 强制创建目录
+        # 强制创建目录并设置权限
         mkdir -p "${M3U_DIR}"
         chmod 777 "${M3U_DIR}"
-
-        echo "🛠️ 路径验证"
+        echo "🛠️ 初始化完成"
         echo "M3U输出目录: ${M3U_DIR}"
         echo "URL文件目录: ${URL_DIR}"
         ls -l "${URL_DIR}"
 
+    - name: Process M3U Files
+      run: |
+        # 定义绝对路径
+        REPO_DIR="${WORKSPACE}/pintaizhibo"
+        M3U_DIR="${WORKSPACE}/m3u"
+        
         # 运行处理脚本
+        echo "🏃 开始执行脚本"
         chmod +x "${REPO_DIR}/scripts/process_m3u.sh"
         "${REPO_DIR}/scripts/process_m3u.sh"
 
@@ -44,7 +50,8 @@ jobs:
         echo "=== 文件详情 ==="
         ls -l "${M3U_DIR}"
 
-    - uses: actions/upload-artifact@v4
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
       with:
         name: m3u-output
         path: /home/runner/work/pintaizhibo/m3u
