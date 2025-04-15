@@ -16,60 +16,60 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Generate source files
+    - name: Generate URL files
       env:
         BASE_URL: ${{ secrets.BASE_URL }}
         JSON_URL: ${{ secrets.JSON_URL }}
       run: |
-        pip install -r requirements.txt
+        # 创建多级目录
+        mkdir -p sources/url
         python scripts/generate_sources.py
-
-    - name: Validate sources directory
-      run: |
-        echo "✅ 生成的.url文件列表:"
-        ls -la sources/
-        echo "文件内容示例:"
-        head -n 3 sources/*.url
+        
+        echo "=== 生成的URL文件 ==="
+        tree sources/url/
 
     - uses: actions/upload-artifact@v4
       with:
-        name: sources
-        path: sources/
+        name: url-files
+        path: sources/url/
         retention-days: 1
 
   build-m3u:
     needs: generate-sources
     runs-on: ubuntu-latest
     env:
-      LANG: C.UTF-8  # 强制中文编码
+      LANG: C.UTF-8
     steps:
     - uses: actions/checkout@v4
     
-    - uses: actions/download-artifact@v4
+    - name: Download URL files
+      uses: actions/download-artifact@v4
       with:
-        name: sources
-        path: ./sources
+        name: url-files
+        path: sources/url
 
-    - name: Install dependencies
+    - name: Install tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y jq
+        sudo apt-get install -y jq tree
 
     - name: Process M3U
       shell: bash
       run: |
-        echo "=== 环境验证 ==="
-        echo "当前工作目录: $(pwd)"
-        echo "sources目录内容:"
-        ls -la sources/
-        
-        echo "=== 执行处理 ==="
+        # 初始化目录
         mkdir -p m3u
+        
+        echo "=== 环境验证 ==="
+        echo "工作目录: $(pwd)"
+        echo "目录结构:"
+        tree -L 3
+        
+        # 处理文件
         chmod +x scripts/process_m3u.sh
         ./scripts/process_m3u.sh
         
         echo "=== 结果验证 ==="
-        echo "生成的M3U文件列表:"
+        echo "生成的M3U文件:"
         find m3u/ -type f -print -exec head -n 3 {} \;
 
     - uses: actions/upload-artifact@v4
