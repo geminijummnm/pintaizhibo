@@ -28,10 +28,13 @@ jobs:
       with:
         name: sources
         path: sources/
+        retention-days: 1
 
   build-m3u:
     needs: generate-sources
     runs-on: ubuntu-latest
+    env:
+      LANG: C.UTF-8  # 强制中文编码
     steps:
     - uses: actions/checkout@v4
     
@@ -41,16 +44,26 @@ jobs:
         path: ./sources
 
     - name: Process M3U
+      shell: bash {0}
       run: |
+        echo "=== 环境验证 ==="
         echo "当前工作目录: $(pwd)"
-        echo "sources 目录内容:"
-        ls -la sources/
+        echo "目录结构:"
+        tree -L 3
         
-        mkdir -p m3u
+        echo "=== 文件预处理 ==="
         chmod +x scripts/process_m3u.sh
+        mkdir -p m3u
+        
+        echo "=== 执行处理 ==="
         ./scripts/process_m3u.sh
+        
+        echo "=== 结果验证 ==="
+        echo "生成的M3U文件:"
+        find m3u/ -type f -print -exec head -n 3 {} \;
 
     - uses: actions/upload-artifact@v4
       with:
         name: m3u
         path: m3u/
+        retention-days: 1
