@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# 硬编码路径定义（关键修正）
+# 硬编码路径定义
 WORKSPACE="/home/runner/work/pintaizhibo"
 REPO_DIR="${WORKSPACE}/pintaizhibo"
 URL_DIR="${REPO_DIR}/sources/url"
@@ -12,21 +12,22 @@ TMP_FILE="${WORKSPACE}/_temp.json"
 mkdir -p "${M3U_DIR}"
 rm -f "${TMP_FILE}" 2>/dev/null || true
 
-echo "🛠️ 路径验证"
-echo "工作区根目录: ${WORKSPACE}"
-echo "M3U输出目录: ${M3U_DIR}"
-echo "临时文件: ${TMP_FILE}"
-echo "目录结构:"
-tree -L 3 "${WORKSPACE}"
-
 process_url_file() {
     local url_file="$1"
     echo "🔍 处理文件: ${url_file}"
     
-    # 文件名安全处理（替换特殊字符）
-    local title=$(basename "${url_file}" .url | sed 's/[^a-zA-Z0-9_-]/_/g')
+    # 文件名安全处理（保留中文）
+    local title=$(basename "${url_file}" .url | sed 's/[\/\\:*?"<>| ]/_/g')
     local m3u_file="${M3U_DIR}/${title}.m3u"
+    
+    # 文件名冲突检测
+    if [[ -f "${m3u_file}" ]]; then
+        echo "⚠️ 文件名冲突: ${m3u_file}"
+        m3u_file="${M3U_DIR}/${title}_$(date +%s).m3u"
+    fi
+
     echo "📁 目标文件: ${m3u_file}"
+    touch "${m3u_file}.test" && rm "${m3u_file}.test"  # 写入测试
 
     # 读取URL
     local m3u_url=$(grep -oP '=\K.*' "${url_file}" || echo "")
@@ -48,13 +49,14 @@ process_url_file() {
             line_count=$(wc -l < "${m3u_file}")
             if [[ "${line_count}" -gt 1 ]]; then
                 echo "✅ 生成成功: ${m3u_file} (${line_count}行)"
+                return 0
             else
                 echo "⚠️ 空文件已删除: ${m3u_file}"
                 rm -f "${m3u_file}"
+                return 1
             fi
         else
-            echo "❌ JSON解析失败，原始内容:"
-            head -c 200 "${TMP_FILE}"
+            echo "❌ JSON解析失败"
             return 4
         fi
     else
