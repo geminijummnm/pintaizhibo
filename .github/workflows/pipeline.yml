@@ -9,21 +9,31 @@ jobs:
   generate-sources:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
+    - uses: actions/checkout@v4  # 检出仓库
+
+    - name: Set up Python 3.10
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: "3.10"
+        cache: 'pip'  # 启用缓存加速
 
-    - name: Generate URL files
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests  # 显式安装依赖
+
+    - name: Generate URL Files
       env:
         BASE_URL: ${{ secrets.BASE_URL }}
         JSON_URL: ${{ secrets.JSON_URL }}
       run: |
+        # 创建目录并生成文件
         mkdir -p sources/url
+        echo "🛠️ 开始生成URL文件..."
         python scripts/generate_sources.py
-        echo "生成的URL文件："
+
+        # 验证生成结果
+        echo "=== 生成的URL文件 ==="
         tree sources/url/
 
     - uses: actions/upload-artifact@v4
@@ -32,46 +42,45 @@ jobs:
         path: sources/url/
 
   build-m3u:
-    needs: generate-sources
+    needs: generate-sources  # 依赖前序任务
     runs-on: ubuntu-latest
     env:
-      WORKSPACE: "/home/runner/work/pintaizhibo"  # 声明全局变量
+      WORKSPACE: "/home/runner/work/pintaizhibo"  # 全局路径定义
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Download URL files
+
+    - name: Download URL Files
       uses: actions/download-artifact@v4
       with:
         name: url-files
-        path: sources/url
+        path: sources/url  # 下载到正确位置
 
     - name: Setup Tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y jq tree
+        sudo apt-get install -y jq tree  # 安装处理工具
 
-    - name: Process M3U
+    - name: Process M3U Files
       run: |
         # 定义绝对路径
-        M3U_DIR="${WORKSPACE}/m3u"
         REPO_DIR="${WORKSPACE}/pintaizhibo"
+        M3U_DIR="${WORKSPACE}/m3u"
         URL_DIR="${REPO_DIR}/sources/url"
 
-        # 强制创建并验证目录
+        # 强制创建目录并验证权限
         mkdir -p "${M3U_DIR}"
-        echo "🛠️ 目录权限验证"
+        echo "✅ 目录权限验证："
         ls -ld "${M3U_DIR}"
         touch "${M3U_DIR}/testfile" && rm "${M3U_DIR}/testfile"
 
         # 运行处理脚本
+        echo "🏃 执行处理脚本..."
         chmod +x "${REPO_DIR}/scripts/process_m3u.sh"
         "${REPO_DIR}/scripts/process_m3u.sh"
 
-        # 结果验证（关键步骤）
-        echo "=== 生成文件列表 ==="
-        ls -l "${M3U_DIR}"
-        echo "=== 文件数量 ==="
-        find "${M3U_DIR}" -name "*.m3u" | wc -l
+        # 最终验证
+        echo "=== 生成的M3U文件 ==="
+        tree -sh "${M3U_DIR}"
 
     - name: Upload M3U Files
       uses: actions/upload-artifact@v4
