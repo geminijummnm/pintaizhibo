@@ -24,7 +24,7 @@ jobs:
         pip install -r requirements.txt
         python scripts/generate_sources.py
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: sources
         path: sources/
@@ -44,7 +44,7 @@ jobs:
         chmod +x scripts/process_m3u.sh
         ./scripts/process_m3u.sh
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: m3u
         path: m3u/
@@ -67,7 +67,7 @@ jobs:
            --arg logo "${{ secrets.DEFAULT_LOGO }}" \
            -f config/template.json m3u/ > final_config.json
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: config
         path: final_config.json
