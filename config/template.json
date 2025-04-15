@@ -1,0 +1,14 @@
+{
+  "logo": "\($logo)",
+  "spider": "https://mirror.ghproxy.com/.../custom_spider.jar",
+  "lives": [
+    .[] | {
+      "name": input_filename | split("/")[-1] | split(".")[0],
+      "type": 0,
+      "url": "\($repo)/m3u/\(input_filename | split("/")[-1])",
+      "ua": "okhttp",
+      "epg": "http://epg.112114.xyz/?ch={name}&date={date}",
+      "logo": "对应xinimg值"
+    }
+  ]
+}
