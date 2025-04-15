@@ -17,7 +17,7 @@ jobs:
         python-version: '3.10'
 
     - name: Install dependencies
-      run: pip install requests
+      run: pip install requests  # 确保安装requests库
 
     - name: Generate URL files
       env:
@@ -26,8 +26,8 @@ jobs:
       run: |
         mkdir -p sources/url
         python scripts/generate_sources.py
-        echo "生成的文件:"
-        ls -la sources/url/
+        echo "生成的URL文件："
+        tree sources/url/
 
     - uses: actions/upload-artifact@v4
       with:
@@ -40,13 +40,45 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - uses: actions/download-artifact@v4
+    - name: Download URL files
+      uses: actions/download-artifact@v4
       with:
         name: url-files
         path: sources/url
 
+    - name: Setup Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq tree  # 安装依赖工具
+
     - name: Process M3U
       run: |
-        mkdir -p m3u
-        chmod +x scripts/process_m3u.sh
-        ./scripts/process_m3u.sh
+        # 初始化目录
+        mkdir -p ../m3u  # 在根目录创建m3u文件夹
+        
+        # 设置绝对路径
+        WORKSPACE="/home/runner/work/pintaizhibo"
+        REPO_DIR="${WORKSPACE}/pintaizhibo"
+        M3U_DIR="${WORKSPACE}/m3u"
+        URL_DIR="${REPO_DIR}/sources/url"
+
+        echo "🛠️ 路径验证"
+        echo "工作区根目录: ${WORKSPACE}"
+        echo "仓库目录: ${REPO_DIR}"
+        echo "M3U输出目录: ${M3U_DIR}"
+        echo "URL文件目录: ${URL_DIR}"
+        echo "目录结构:"
+        tree -L 3 "${WORKSPACE}"
+
+        # 运行处理脚本
+        chmod +x ${REPO_DIR}/scripts/process_m3u.sh
+        ${REPO_DIR}/scripts/process_m3u.sh
+
+        # 结果验证
+        echo "=== 生成的M3U文件 ==="
+        tree "${M3U_DIR}"
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: m3u-files
+        path: ../m3u/  # 上传根目录下的m3u文件夹
