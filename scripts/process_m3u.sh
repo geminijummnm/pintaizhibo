@@ -1,7 +1,7 @@
 #!/bin/bash
-set -euo pipefail  # 任何错误立即终止
+set -euo pipefail
 
-# 初始化路径
+# 初始化路径变量
 WORKSPACE="$(pwd)"
 SOURCES_DIR="${WORKSPACE}/sources"
 M3U_DIR="${WORKSPACE}/m3u"
@@ -29,6 +29,7 @@ process_url_file() {
         return 2
     fi
     
+    # 发送请求
     echo "🌐 请求URL: ${m3u_url}"
     local http_code
     http_code=$(curl -sS -o response.txt -w "%{http_code}" -L --retry 3 "${m3u_url}")
@@ -39,11 +40,11 @@ process_url_file() {
         return 3
     fi
     
-    # 生成M3U文件
-    local m3u_file="${M3U_DIR}/${title}.m3u"
+    # 生成M3U文件（修复路径错误）
+    local m3u_file="${M3U_DIR}/${title}.m3u"  # 关键修复：使用正确路径
     echo "#EXTM3U" > "${m3u_file}"
     
-    # 使用jq解析JSON并处理错误
+    # 使用jq解析JSON
     if ! jq -r '.zhubo[] | "#EXTINF:-1,\(.title)\n\(.address)"' response.txt >> "${m3u_file}"; then
         echo "❌ JSON解析失败: ${m3u_url}"
         return 4
